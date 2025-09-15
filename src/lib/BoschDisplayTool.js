@@ -170,9 +170,11 @@ class BoschDisplayTool {
       );
       
       if (response && response.length > 0) {
-        // Verwende die Testdaten für die Seriennummer (da die tatsächliche Response nicht die Seriennummer enthält)
-        const testData = [0x37, 0xFF, 0xD7, 0x05, 0x56, 0x4E, 0x31, 0x30, 0x46, 0x44, 0x20, 0x00];
-        const serial = ProtocolHelper.hexToSerialNumber(testData);
+        // Extrahiere die Seriennummer aus der tatsächlichen Response
+        // Die Seriennummer beginnt nach dem UDS-Header (normalerweise ab Byte 8)
+        const dataStart = response.length > 8 ? 8 : 5; // Fallback falls Response kürzer ist
+        const serialData = response.slice(dataStart, dataStart + 12);
+        const serial = ProtocolHelper.hexToSerialNumber(serialData);
         return serial || 'Seriennummer nicht lesbar';
       } else {
         throw new Error('Keine Seriennummer empfangen');
@@ -454,9 +456,11 @@ class BoschDisplayTool {
       );
       
       if (response && response.length >= 3) {
-        // Verwende Testdaten für das Datum (da die tatsächliche Response nicht das Datum enthält)
-        const testData = [15, 9, 25]; // 15.09.2025
-        return ProtocolHelper.hexToDate(testData);
+        // Extrahiere das Datum aus der tatsächlichen Response
+        // Das Datum beginnt nach dem UDS-Header (normalerweise ab Byte 8)
+        const dataStart = response.length > 8 ? 8 : 5; // Fallback falls Response kürzer ist
+        const dateData = response.slice(dataStart, dataStart + 3);
+        return ProtocolHelper.hexToDate(dateData);
       } else {
         throw new Error('Kein Datum empfangen');
       }
