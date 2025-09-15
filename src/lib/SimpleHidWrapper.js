@@ -90,6 +90,7 @@ class SimpleHidWrapper {
 
     return new Promise((resolve, reject) => {
       const startTime = Date.now();
+      let timeoutId = null;
       
       const tryRead = () => {
         try {
@@ -99,12 +100,14 @@ class SimpleHidWrapper {
             const buffer = Buffer.from(data);
             const hexString = buffer.slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join(' ');
             console.log(chalk.gray(`RX: ${hexString}...`));
+            if (timeoutId) clearTimeout(timeoutId);
             resolve(buffer);
             return;
           }
         } catch (error) {
           // Ignoriere "no data" Fehler und versuche es erneut
           if (!error.message.includes('no data') && !error.message.includes('need one callback')) {
+            if (timeoutId) clearTimeout(timeoutId);
             reject(new Error(`Lesefehler: ${error.message}`));
             return;
           }
@@ -112,12 +115,13 @@ class SimpleHidWrapper {
         
         // Prüfe Timeout
         if (Date.now() - startTime > timeout) {
-          reject(new Error('Timeout beim Lesen von Daten'));
+          if (timeoutId) clearTimeout(timeoutId);
+          reject(new Error('TIMEOUT'));
           return;
         }
         
         // Versuche es erneut nach kurzer Pause
-        setTimeout(tryRead, 10);
+        timeoutId = setTimeout(tryRead, 10);
       };
       
       tryRead();

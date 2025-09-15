@@ -116,6 +116,9 @@ class BoschDisplayTool {
       const data = await this.hidWrapper.read(timeout);
       return data;
     } catch (error) {
+      if (error.message.includes('timeout') || error.message.includes('Timeout')) {
+        throw new Error('TIMEOUT');
+      }
       throw new Error(`Empfangsfehler: ${error.message}`);
     }
   }
@@ -123,7 +126,7 @@ class BoschDisplayTool {
   /**
    * Sendet einen UDS-Service-Request
    */
-  async sendUdsRequest(serviceId, dataIdentifier, additionalData = []) {
+  async sendUdsRequest(serviceId, dataIdentifier, additionalData = [], timeout = 3000) {
     if (!this.isConnected) {
       throw new Error('Nicht mit dem Display verbunden!');
     }
@@ -133,8 +136,8 @@ class BoschDisplayTool {
       const request = ProtocolHelper.createUdsFrame(serviceId, dataIdentifier, additionalData);
       await this.sendData(request);
       
-      // Empfange Response
-      const response = await this.receiveData();
+      // Empfange Response mit Timeout
+      const response = await this.receiveData(timeout);
       
       // Parse Response mit Protokoll-Helper
       const parsedResponse = ProtocolHelper.parseUdsResponse(response);
@@ -147,6 +150,9 @@ class BoschDisplayTool {
       }
       
     } catch (error) {
+      if (error.message.includes('Timeout') || error.message.includes('TIMEOUT')) {
+        throw new Error('TIMEOUT');
+      }
       throw new Error(`UDS-Request-Fehler: ${error.message}`);
     }
   }
@@ -516,9 +522,235 @@ class BoschDisplayTool {
   }
 
   /**
+   * Liest Drive Unit Informationen
+   */
+  async readDriveUnitInfo() {
+    if (!this.isConnected) {
+      throw new Error('Nicht mit dem Display verbunden!');
+    }
+
+    try {
+      console.log(chalk.blue('🚴 Lese Drive Unit Informationen...'));
+      
+      const duInfo = {};
+      let hasTimeout = false;
+      
+      // DU Part Number
+      try {
+        const response = await this.sendUdsRequest(
+          UDS_SERVICES.READ_DATA_BY_IDENTIFIER,
+          DATA_IDENTIFIERS.DU_PART_NUMBER,
+          [],
+          2000 // 2 Sekunden Timeout
+        );
+        if (response && response.length > 0) {
+          const data = response.slice(8, 18);
+          duInfo.partNumber = ProtocolHelper.hexToArticleNumber(data);
+        }
+      } catch (error) {
+        if (error.message === 'TIMEOUT') {
+          hasTimeout = true;
+          duInfo.partNumber = 'Nicht angeschlossen (Timeout)';
+        } else {
+          duInfo.partNumber = `Fehler: ${error.message}`;
+        }
+      }
+
+      // DU Serial Number
+      try {
+        const response = await this.sendUdsRequest(
+          UDS_SERVICES.READ_DATA_BY_IDENTIFIER,
+          DATA_IDENTIFIERS.DU_SERIAL_NUMBER,
+          [],
+          2000
+        );
+        if (response && response.length > 0) {
+          const data = response.slice(8, 20);
+          duInfo.serialNumber = ProtocolHelper.hexToSerialNumber(data);
+        }
+      } catch (error) {
+        if (error.message === 'TIMEOUT') {
+          hasTimeout = true;
+          duInfo.serialNumber = 'Nicht angeschlossen (Timeout)';
+        } else {
+          duInfo.serialNumber = `Fehler: ${error.message}`;
+        }
+      }
+
+      // DU Hardware Version
+      try {
+        const response = await this.sendUdsRequest(
+          UDS_SERVICES.READ_DATA_BY_IDENTIFIER,
+          DATA_IDENTIFIERS.DU_HW_VERSION,
+          [],
+          2000
+        );
+        if (response && response.length >= 4) {
+          const data = response.slice(8, 12);
+          duInfo.hardwareVersion = ProtocolHelper.hexToVersion(data);
+        }
+      } catch (error) {
+        if (error.message === 'TIMEOUT') {
+          hasTimeout = true;
+          duInfo.hardwareVersion = 'Nicht angeschlossen (Timeout)';
+        } else {
+          duInfo.hardwareVersion = `Fehler: ${error.message}`;
+        }
+      }
+
+      // DU Software Version
+      try {
+        const response = await this.sendUdsRequest(
+          UDS_SERVICES.READ_DATA_BY_IDENTIFIER,
+          DATA_IDENTIFIERS.DU_SW_VERSION,
+          [],
+          2000
+        );
+        if (response && response.length >= 4) {
+          const data = response.slice(8, 12);
+          duInfo.softwareVersion = ProtocolHelper.hexToVersion(data);
+        }
+      } catch (error) {
+        if (error.message === 'TIMEOUT') {
+          hasTimeout = true;
+          duInfo.softwareVersion = 'Nicht angeschlossen (Timeout)';
+        } else {
+          duInfo.softwareVersion = `Fehler: ${error.message}`;
+        }
+      }
+
+      // Setze Status basierend auf Timeouts
+      if (hasTimeout) {
+        duInfo.status = 'Nicht angeschlossen';
+        duInfo.message = 'Drive Unit ist nicht am Display angeschlossen oder nicht verfügbar';
+      } else {
+        duInfo.status = 'Verfügbar';
+      }
+
+      return duInfo;
+      
+    } catch (error) {
+      throw new Error(`Drive Unit Info-Lesefehler: ${error.message}`);
+    }
+  }
+
+  /**
+   * Liest Battery Management System Informationen
+   */
+  async readBatteryManagementInfo() {
+    if (!this.isConnected) {
+      throw new Error('Nicht mit dem Display verbunden!');
+    }
+
+    try {
+      console.log(chalk.blue('🔋 Lese Battery Management System Informationen...'));
+      
+      const bmsInfo = {};
+      let hasTimeout = false;
+      
+      // BMS Part Number
+      try {
+        const response = await this.sendUdsRequest(
+          UDS_SERVICES.READ_DATA_BY_IDENTIFIER,
+          DATA_IDENTIFIERS.BMS_PART_NUMBER,
+          [],
+          2000 // 2 Sekunden Timeout
+        );
+        if (response && response.length > 0) {
+          const data = response.slice(8, 18);
+          bmsInfo.partNumber = ProtocolHelper.hexToArticleNumber(data);
+        }
+      } catch (error) {
+        if (error.message === 'TIMEOUT') {
+          hasTimeout = true;
+          bmsInfo.partNumber = 'Nicht angeschlossen (Timeout)';
+        } else {
+          bmsInfo.partNumber = `Fehler: ${error.message}`;
+        }
+      }
+
+      // BMS Serial Number
+      try {
+        const response = await this.sendUdsRequest(
+          UDS_SERVICES.READ_DATA_BY_IDENTIFIER,
+          DATA_IDENTIFIERS.BMS_SERIAL_NUMBER,
+          [],
+          2000
+        );
+        if (response && response.length > 0) {
+          const data = response.slice(8, 20);
+          bmsInfo.serialNumber = ProtocolHelper.hexToSerialNumber(data);
+        }
+      } catch (error) {
+        if (error.message === 'TIMEOUT') {
+          hasTimeout = true;
+          bmsInfo.serialNumber = 'Nicht angeschlossen (Timeout)';
+        } else {
+          bmsInfo.serialNumber = `Fehler: ${error.message}`;
+        }
+      }
+
+      // BMS Hardware Version
+      try {
+        const response = await this.sendUdsRequest(
+          UDS_SERVICES.READ_DATA_BY_IDENTIFIER,
+          DATA_IDENTIFIERS.BMS_HW_VERSION,
+          [],
+          2000
+        );
+        if (response && response.length >= 4) {
+          const data = response.slice(8, 12);
+          bmsInfo.hardwareVersion = ProtocolHelper.hexToVersion(data);
+        }
+      } catch (error) {
+        if (error.message === 'TIMEOUT') {
+          hasTimeout = true;
+          bmsInfo.hardwareVersion = 'Nicht angeschlossen (Timeout)';
+        } else {
+          bmsInfo.hardwareVersion = `Fehler: ${error.message}`;
+        }
+      }
+
+      // BMS Software Version
+      try {
+        const response = await this.sendUdsRequest(
+          UDS_SERVICES.READ_DATA_BY_IDENTIFIER,
+          DATA_IDENTIFIERS.BMS_SW_VERSION,
+          [],
+          2000
+        );
+        if (response && response.length >= 4) {
+          const data = response.slice(8, 12);
+          bmsInfo.softwareVersion = ProtocolHelper.hexToVersion(data);
+        }
+      } catch (error) {
+        if (error.message === 'TIMEOUT') {
+          hasTimeout = true;
+          bmsInfo.softwareVersion = 'Nicht angeschlossen (Timeout)';
+        } else {
+          bmsInfo.softwareVersion = `Fehler: ${error.message}`;
+        }
+      }
+
+      // Setze Status basierend auf Timeouts
+      if (hasTimeout) {
+        bmsInfo.status = 'Nicht angeschlossen';
+        bmsInfo.message = 'Battery Management System ist nicht am Display angeschlossen oder nicht verfügbar';
+      } else {
+        bmsInfo.status = 'Verfügbar';
+      }
+
+      return bmsInfo;
+      
+    } catch (error) {
+      throw new Error(`Battery Management Info-Lesefehler: ${error.message}`);
+    }
+  }
+
+  /**
    * Liest alle verfügbaren Informationen
    */
-  async readAllInformation() {
+  async readAllInformation(mode = 'display') {
     try {
       console.log(chalk.blue('📋 Lese alle Display-Informationen...\n'));
       
@@ -546,6 +778,41 @@ class BoschDisplayTool {
         } catch (error) {
           results[task.key] = `Fehler: ${error.message}`;
         }
+      }
+      
+      // Versuche Drive Unit und Battery Management Info zu lesen (nur im full-Modus)
+      if (mode === 'full') {
+        try {
+          console.log(chalk.blue('🚴 Versuche Drive Unit Informationen zu lesen...'));
+          results.driveUnit = await this.readDriveUnitInfo();
+        } catch (error) {
+          results.driveUnit = { 
+            error: error.message,
+            status: 'Fehler',
+            message: 'Drive Unit konnte nicht gelesen werden'
+          };
+        }
+        
+        try {
+          console.log(chalk.blue('🔋 Versuche Battery Management Informationen zu lesen...'));
+          results.batteryManagement = await this.readBatteryManagementInfo();
+        } catch (error) {
+          results.batteryManagement = { 
+            error: error.message,
+            status: 'Fehler',
+            message: 'Battery Management System konnte nicht gelesen werden'
+          };
+        }
+      } else {
+        // Im display-Modus: Zeige Hinweis
+        results.driveUnit = {
+          status: 'Nicht abgefragt',
+          message: 'Drive Unit wird nur im full-Modus abgefragt (Display muss am Fahrrad angeschlossen sein)'
+        };
+        results.batteryManagement = {
+          status: 'Nicht abgefragt',
+          message: 'Battery Management wird nur im full-Modus abgefragt (Display muss am Fahrrad angeschlossen sein)'
+        };
       }
       
       // Füge Zeitstempel hinzu

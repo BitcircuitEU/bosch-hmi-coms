@@ -1,5 +1,5 @@
 {
-  "name": "bosch-ebike-display-tool",
+  "name": "bosch-hmi-coms",
   "version": "1.0.0",
   "description": "Tool zur Kommunikation mit Bosch eBike Displays über HID",
   "main": "src/index.js",
@@ -8,8 +8,18 @@
     "dev": "nodemon src/index.js connect",
     "list": "node src/index.js list",
     "connect": "node src/index.js connect",
+    "display": "node src/index.js connect --mode display",
+    "full": "node src/index.js connect --mode full",
     "connect-interactive": "node src/index.js connect --interactive",
-    "connect-verbose": "node src/index.js connect --verbose"
+    "connect-verbose": "node src/index.js connect --verbose",
+    "connect-session": "node src/index.js connect --session",
+    "connect-diagnostic": "node src/index.js connect --diagnostic --verbose",
+    "session": "node src/index.js session",
+    "session-extended": "node src/index.js session --type extended",
+    "session-programming": "node src/index.js session --type programming",
+    "diagnostic": "node src/index.js diagnostic",
+    "diagnostic-verbose": "node src/index.js diagnostic --verbose",
+    "devices": "node src/index.js devices"
   },
   "keywords": [
     "bosch",

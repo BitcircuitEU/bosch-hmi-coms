@@ -61,7 +61,22 @@ const DATA_IDENTIFIERS = {
   CURRENT_DATE: [0x02, 0x3A],
   
   // Bosch specific
-  BOSCH_PRODUCT_CODE: [0x5B, 0x7C]
+  BOSCH_PRODUCT_CODE: [0x5B, 0x7C],
+  
+  // Drive Unit (DU) - SID 34/98 - NEUE HINZUGEFÜGTE IDENTIFIERS
+  DU_PART_NUMBER: [0xF1, 0x30],         // 61744
+  DU_SERIAL_NUMBER: [0xF1, 0xAC],       // 61836
+  DU_HW_VERSION: [0xF1, 0x50],          // 61776
+  DU_SW_VERSION: [0xF1, 0x51],          // 61777
+  DU_LIFE_TIME_INFO: [0xF1, 0x20],      // 61728
+  DU_CURRENT_MOTOR_SPEED: [0xF1, 0x26], // 61734
+  
+  // Battery Management System (BMS) - SID 34/98 - NEUE HINZUGEFÜGTE IDENTIFIERS
+  BMS_PART_NUMBER: [0xF1, 0x30],        // 61744
+  BMS_SERIAL_NUMBER: [0xF1, 0xAC],      // 61836
+  BMS_HW_VERSION: [0xF1, 0x50],         // 61776
+  BMS_SW_VERSION: [0xF1, 0x51],         // 61777
+  BMS_LIFE_TIME_INFO: [0xF1, 0x33]      // 61747
 };
 
 /**
