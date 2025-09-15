@@ -1,7 +1,3 @@
-# Bosch eBike Display Tool
-
-Ein erweiterte Tool zur Kommunikation mit Bosch eBike Displays über USB HID mit UDS-Protokoll. Basierend auf der offiziellen Bosch eBike HIM Dokumentation.
-
 ## 🚀 Features
 
 ### Grundlegende Funktionen
