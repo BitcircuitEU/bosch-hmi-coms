@@ -1,0 +1,37 @@
+{
+  "name": "bosch-ebike-display-tool",
+  "version": "1.0.0",
+  "description": "Tool zur Kommunikation mit Bosch eBike Displays über HID",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js connect",
+    "dev": "nodemon src/index.js connect",
+    "list": "node src/index.js list",
+    "connect": "node src/index.js connect",
+    "connect-interactive": "node src/index.js connect --interactive",
+    "connect-verbose": "node src/index.js connect --verbose"
+  },
+  "keywords": [
+    "bosch",
+    "ebike",
+    "display",
+    "hid",
+    "diagnostic",
+    "uds"
+  ],
+  "author": "Bosch eBike Display Tool",
+  "license": "MIT",
+  "dependencies": {
+    "node-hid": "^2.1.2",
+    "commander": "^11.1.0",
+    "chalk": "^4.1.2",
+    "table": "^6.8.1",
+    "inquirer": "^8.2.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
