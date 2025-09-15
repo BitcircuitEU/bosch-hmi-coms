@@ -3,18 +3,10 @@ const { table } = require('table');
 const { isBoschDisplay } = require('./deviceManager');
 const SimpleHidWrapper = require('./SimpleHidWrapper');
 const { 
-  DEVICE_CONSTANTS, 
   UDS_SERVICES, 
   DATA_IDENTIFIERS, 
   HID_FRAME_HEADERS,
-  LANGUAGE_CODES,
-  HARDWARE_VARIANTS,
-  SOFTWARE_VARIANTS,
-  CHARGING_STATES,
-  ONBOARD_CONDITIONS,
   COMPONENT_TYPES,
-  DISTANCE_UNITS,
-  CLOCK_DISPLAY_MODES,
   ProtocolHelper 
 } = require('./protocols');
 
@@ -237,29 +229,6 @@ class BoschDisplayTool {
     }
   }
 
-  /**
-   * Liest den Ladezustand
-   */
-  async readChargingState() {
-    try {
-      console.log(chalk.blue('📊 Prüfe Ladezustand...'));
-      
-      const response = await this.sendUdsRequest(
-        UDS_SERVICES.READ_DATA_BY_IDENTIFIER, 
-        DATA_IDENTIFIERS.SYSTEM_CHARGE_STATE
-      );
-      
-      if (response && response.length > 0) {
-        const chargingState = response[2];
-        return CHARGING_STATES[chargingState] || `Unbekannt (0x${chargingState.toString(16)})`;
-      } else {
-        throw new Error('Kein Ladezustand empfangen');
-      }
-      
-    } catch (error) {
-      throw new Error(`Ladezustand-Lesefehler: ${error.message}`);
-    }
-  }
 
   /**
    * Liest den Produktcode
@@ -288,56 +257,15 @@ class BoschDisplayTool {
     }
   }
 
-  /**
-   * Liest die Spracheinstellungen
-   */
-  async readLanguageSetting() {
-    try {
-      console.log(chalk.blue('📊 Lese Spracheinstellungen...'));
-      
-      const response = await this.sendUdsRequest(
-        UDS_SERVICES.READ_DATA_BY_IDENTIFIER, 
-        DATA_IDENTIFIERS.LANGUAGE_SETTING
-      );
-      
-      if (response && response.length > 0) {
-        // Die Spracheinstellung ist im 7. Byte (Index 6) der Response
-        const languageCode = response[6];
-        return LANGUAGE_CODES[languageCode] || `Unbekannt (0x${languageCode.toString(16)})`;
-      } else {
-        throw new Error('Keine Spracheinstellungen empfangen');
-      }
-      
-    } catch (error) {
-      throw new Error(`Spracheinstellungen-Lesefehler: ${error.message}`);
-    }
-  }
 
-  /**
-   * Liest das Herstellungsdatum
-   */
-  async readManufacturingDate() {
-    try {
-      console.log(chalk.blue('📊 Lese Herstellungsdatum...'));
-      
-      const response = await this.sendUdsRequest(
-        UDS_SERVICES.READ_DATA_BY_IDENTIFIER, 
-        DATA_IDENTIFIERS.MANUFACTURING_DATE
-      );
-      
-      if (response && response.length >= 2) {
-        // Extrahiere die Herstellungsdatum-Daten aus der Response
-        // Das Herstellungsdatum ist in den Bytes 8-9 (0 15)
-        const data = response.slice(8, 10);
-        return ProtocolHelper.hexToManufacturingDate(data);
-      } else {
-        throw new Error('Kein Herstellungsdatum empfangen');
-      }
-      
-    } catch (error) {
-      throw new Error(`Herstellungsdatum-Lesefehler: ${error.message}`);
-    }
-  }
+
+
+
+
+
+
+
+
 
   /**
    * Liest die Artikelnummer (HMI Part Number)
@@ -393,31 +321,6 @@ class BoschDisplayTool {
   }
 
   /**
-   * Liest die Entfernungseinheiten
-   */
-  async readDistanceUnit() {
-    try {
-      console.log(chalk.blue('📊 Lese Entfernungseinheiten...'));
-      
-      const response = await this.sendUdsRequest(
-        UDS_SERVICES.READ_DATA_BY_IDENTIFIER, 
-        DATA_IDENTIFIERS.DISTANCE_UNIT
-      );
-      
-      if (response && response.length > 0) {
-        const unitCode = response[2];
-        return DISTANCE_UNITS[unitCode] || `Unbekannt (0x${unitCode.toString(16)})`;
-      } else {
-        throw new Error('Keine Entfernungseinheiten empfangen');
-      }
-      
-    } catch (error) {
-      throw new Error(`Entfernungseinheiten-Lesefehler: ${error.message}`);
-    }
-  }
-
-
-  /**
    * Liest die aktuelle Uhrzeit
    */
   async readCurrentTime() {
@@ -469,31 +372,6 @@ class BoschDisplayTool {
       throw new Error(`Datum-Lesefehler: ${error.message}`);
     }
   }
-
-  /**
-   * Liest das Uhr-Anzeigeformat
-   */
-  async readClockDisplayMode() {
-    try {
-      console.log(chalk.blue('📊 Lese Uhr-Anzeigeformat...'));
-      
-      const response = await this.sendUdsRequest(
-        UDS_SERVICES.READ_DATA_BY_IDENTIFIER, 
-        DATA_IDENTIFIERS.CLOCK_DISPLAY_MODE
-      );
-      
-      if (response && response.length > 0) {
-        const modeCode = response[2];
-        return CLOCK_DISPLAY_MODES[modeCode] || `Unbekannt (0x${modeCode.toString(16)})`;
-      } else {
-        throw new Error('Kein Uhr-Anzeigeformat empfangen');
-      }
-      
-    } catch (error) {
-      throw new Error(`Uhr-Anzeigeformat-Lesefehler: ${error.message}`);
-    }
-  }
-
 
   /**
    * Setzt Datum und Zeit

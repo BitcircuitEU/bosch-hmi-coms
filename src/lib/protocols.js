@@ -40,23 +40,11 @@ const DATA_IDENTIFIERS = {
   SERIAL_NUMBER: [0x02, 0x42],
   HARDWARE_VERSION: [0x02, 0x21],
   SOFTWARE_VERSION: [0x02, 0x20],
-  HARDWARE_VARIANT: [0x02, 0x30],
-  SOFTWARE_VARIANT: [0x02, 0x31],
   COMPONENT_TYPE: [0x02, 0x60],
   HMI_PART_NUMBER: [0x02, 0x32],
-  MANUFACTURING_DATE: [0x02, 0x22],
   
   // System State
-  SYSTEM_CHARGE_STATE: [0x02, 0x72],
-  HMI_ONBOARD_CONDITION: [0x02, 0x71],
-  
-  // Settings
-  LANGUAGE_SETTING: [0x02, 0x4A],
   PRESENT_DATE_TIME: [0x02, 0x3A],
-  DISTANCE_UNIT: [0x02, 0x4B],
-  CLOCK_DISPLAY_MODE: [0x02, 0x43],
-  
-  // Trip Computer Data
   CURRENT_TIME: [0x02, 0x40],
   CURRENT_DATE: [0x02, 0x3A],
   
@@ -122,67 +110,13 @@ const ERROR_CODES = {
   SERVICE_NOT_SUPPORTED_IN_ACTIVE_SESSION: 0x7F
 };
 
-/**
- * Spracheinstellungen
- */
-const LANGUAGE_CODES = {
-  0x00: 'Deutsch',
-  0x01: 'Englisch',
-  0x02: 'Französisch',
-  0x03: 'Spanisch',
-  0x04: 'Italienisch',
-  0x05: 'Niederländisch',
-  0x06: 'Polnisch',
-  0x07: 'Tschechisch',
-  0x08: 'Ungarisch',
-  0x09: 'Schwedisch',
-  0x0A: 'Norwegisch',
-  0x0B: 'Dänisch',
-  0x0C: 'Finnisch',
-  0x0D: 'Portugiesisch',
-  0x0E: 'Russisch',
-  0x0F: 'Japanisch',
-  0x10: 'Chinesisch',
-  0xDF: 'Bosch-spezifisch (0xDF)',
-  0xCC: 'Bosch-spezifisch (0xCC)'
-};
 
-/**
- * Hardware-Varianten
- */
-const HARDWARE_VARIANTS = {
-  0x01: 'HMI_HW_VAR_DEFAULT',
-  0x02: 'HMI_HW_VAR_SPECIAL',
-  0x03: 'HMI_HW_VAR_PROTOTYPE'
-};
 
-/**
- * Software-Varianten
- */
-const SOFTWARE_VARIANTS = {
-  0x01: 'HMI_SW_VAR_DEFAULT',
-  0x02: 'HMI_SW_VAR_SPECIAL',
-  0x03: 'HMI_SW_VAR_DEBUG'
-};
 
-/**
- * Ladezustände
- */
-const CHARGING_STATES = {
-  0x00: 'Nicht am Laden',
-  0x01: 'Wird geladen',
-  0x02: 'Laden abgeschlossen',
-  0x03: 'Ladefehler'
-};
 
-/**
- * Onboard-Zustände
- */
-const ONBOARD_CONDITIONS = {
-  0x00: 'HMI ist offboard',
-  0x01: 'HMI ist onboard',
-  0x02: 'HMI ist im Übergang'
-};
+
+
+
 
 /**
  * Komponententypen
@@ -193,23 +127,6 @@ const COMPONENT_TYPES = {
   0x0D: 'Nyon',
   0x0E: 'Kiox',
   0x02: 'Intuvia'  // Zusätzliche Mapping basierend auf Logs
-};
-
-/**
- * Entfernungseinheiten
- */
-const DISTANCE_UNITS = {
-  0x00: 'km',
-  0x01: 'miles',
-  0x02: 'km'  // Zusätzliche Mapping basierend auf Logs
-};
-
-/**
- * Uhr-Anzeigeformate
- */
-const CLOCK_DISPLAY_MODES = {
-  0x01: '12h',
-  0x02: '24h'
 };
 
 /**
@@ -319,19 +236,6 @@ class ProtocolHelper {
   }
   
   /**
-   * Konvertiert Hex-Daten zu Herstellungsdatum
-   */
-  static hexToManufacturingDate(hexData) {
-    if (hexData.length >= 2) {
-      // Das Herstellungsdatum ist ein 16-bit Wert (Little Endian)
-      const value = (hexData[1] << 8) | hexData[0];
-      return value.toString();
-    }
-    return 'Unbekannt';
-  }
-  
-  
-  /**
    * Konvertiert Hex-Daten zu Zeit (hh:mm)
    */
   static hexToTime(hexData) {
@@ -359,6 +263,11 @@ class ProtocolHelper {
   }
   
   
+  
+  
+  
+  
+  
   /**
    * Prüft, ob eine Response erfolgreich war
    */
@@ -381,13 +290,6 @@ module.exports = {
   DATA_IDENTIFIERS,
   HID_FRAME_HEADERS,
   ERROR_CODES,
-  LANGUAGE_CODES,
-  HARDWARE_VARIANTS,
-  SOFTWARE_VARIANTS,
-  CHARGING_STATES,
-  ONBOARD_CONDITIONS,
   COMPONENT_TYPES,
-  DISTANCE_UNITS,
-  CLOCK_DISPLAY_MODES,
   ProtocolHelper
 };
