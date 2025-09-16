@@ -1,0 +1,16 @@
+{
+  "name": "Bosch eBike Display Tool",
+  "short_name": "Bosch Display",
+  "description": "WebUSB-basiertes Tool zur Kommunikation mit Bosch eBike Displays",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

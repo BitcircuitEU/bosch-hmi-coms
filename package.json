@@ -1,47 +1,42 @@
 {
-  "name": "bosch-hmi-coms",
-  "version": "1.0.0",
-  "description": "Tool zur Kommunikation mit Bosch eBike Displays über HID",
-  "main": "src/index.js",
+  "name": "bosch-ebike-hmi-communicator",
+  "version": "2.0.0",
+  "description": "Bosch eBike HMI Communicator - WebUSB-basiertes Tool zur Kommunikation mit Bosch eBike Displays",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "start": "node src/index.js connect",
-    "dev": "nodemon src/index.js connect",
-    "list": "node src/index.js list",
-    "connect": "node src/index.js connect",
-    "display": "node src/index.js connect --mode display",
-    "full": "node src/index.js connect --mode full",
-    "connect-interactive": "node src/index.js connect --interactive",
-    "connect-verbose": "node src/index.js connect --verbose",
-    "connect-session": "node src/index.js connect --session",
-    "connect-diagnostic": "node src/index.js connect --diagnostic --verbose",
-    "session": "node src/index.js session",
-    "session-extended": "node src/index.js session --type extended",
-    "session-programming": "node src/index.js session --type programming",
-    "diagnostic": "node src/index.js diagnostic",
-    "diagnostic-verbose": "node src/index.js diagnostic --verbose",
-    "devices": "node src/index.js devices"
+    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
+    "build": "npm run frontend:build && npm run backend:start",
+    "start": "npm run backend:start",
+    "backend:dev": "npm run dev --workspace=backend",
+    "backend:start": "npm run start --workspace=backend",
+    "frontend:dev": "npm run dev --workspace=frontend",
+    "frontend:build": "npm run build --workspace=frontend",
+    "install:all": "npm install",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:build": "docker-compose build",
+    "docker:logs": "docker-compose logs -f"
   },
   "keywords": [
     "bosch",
     "ebike",
     "display",
-    "hid",
+    "webusb",
+    "web",
+    "frontend",
     "diagnostic",
     "uds"
   ],
-  "author": "Bosch eBike Display Tool",
+  "author": "Bosch eBike HMI Communicator",
   "license": "MIT",
-  "dependencies": {
-    "node-hid": "^2.1.2",
-    "commander": "^11.1.0",
-    "chalk": "^4.1.2",
-    "table": "^6.8.1",
-    "inquirer": "^8.2.6"
-  },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "concurrently": "^8.2.2"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=16.0.0"
   }
 }

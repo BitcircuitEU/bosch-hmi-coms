@@ -1,0 +1,36 @@
+{
+  "name": "bosch-ebike-hmi-backend",
+  "version": "1.0.0",
+  "description": "Backend für Bosch eBike HMI Communicator - WebUSB Interface",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js connect",
+    "dev": "nodemon index.js connect",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "bosch",
+    "ebike",
+    "display",
+    "webusb",
+    "backend",
+    "api",
+    "diagnostic"
+  ],
+  "author": "Bosch eBike HMI Communicator",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "socket.io": "^4.7.2",
+    "commander": "^11.1.0",
+    "chalk": "^4.1.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

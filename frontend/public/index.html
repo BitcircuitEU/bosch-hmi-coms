@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bosch eBike Display Tool - WebUSB</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 32px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .header h1 {
+            color: #1f2937;
+            margin: 0 0 8px 0;
+            font-size: 28px;
+        }
+        
+        .header p {
+            color: #6b7280;
+            margin: 0;
+        }
+        
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+        
+        .status.connected {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .status.disconnected {
+            background: #fef2f2;
+            color: #991b1b;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            gap: 8px;
+            margin: 4px;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #2563eb;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover:not(:disabled) {
+            background: #059669;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover:not(:disabled) {
+            background: #dc2626;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .info-label {
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .info-value {
+            color: #1f2937;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+        }
+        
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        
+        .message.error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+        
+        .message.success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚴 Bosch eBike Display Tool</h1>
+            <p>WebUSB-basierte Kommunikation mit Bosch eBike Displays</p>
+        </div>
+        
+        <div id="status" class="status disconnected">
+            <span>🔴</span>
+            <span>Nicht verbunden</span>
+        </div>
+        
+        <div id="buttons">
+            <button id="connectBtn" class="btn btn-primary">
+                🔌 Display verbinden
+            </button>
+            <button id="readBtn" class="btn btn-success hidden">
+                📊 Informationen lesen
+            </button>
+            <button id="disconnectBtn" class="btn btn-danger hidden">
+                🔌 Verbindung trennen
+            </button>
+        </div>
+        
+        <div id="messages"></div>
+        
+        <div id="displayInfo" class="hidden">
+            <h2>Display-Informationen</h2>
+            <div id="infoGrid" class="info-grid"></div>
+        </div>
+    </div>
+
+    <script src="webusb-client.js"></script>
+    <script>
+        class BoschDisplayApp {
+            constructor() {
+                this.client = new BoschDisplayWebUsbClient();
+                this.connected = false;
+                this.displayInfo = null;
+                
+                this.initializeElements();
+                this.attachEventListeners();
+            }
+            
+            initializeElements() {
+                this.statusEl = document.getElementById('status');
+                this.connectBtn = document.getElementById('connectBtn');
+                this.readBtn = document.getElementById('readBtn');
+                this.disconnectBtn = document.getElementById('disconnectBtn');
+                this.messagesEl = document.getElementById('messages');
+                this.displayInfoEl = document.getElementById('displayInfo');
+                this.infoGridEl = document.getElementById('infoGrid');
+            }
+            
+            attachEventListeners() {
+                this.connectBtn.addEventListener('click', () => this.connect());
+                this.readBtn.addEventListener('click', () => this.readDisplayInfo());
+                this.disconnectBtn.addEventListener('click', () => this.disconnect());
+            }
+            
+            async connect() {
+                try {
+                    this.showMessage('Verbinde mit Display...', 'info');
+                    this.setLoading(true);
+                    
+                    await this.client.requestDevice();
+                    await this.client.open();
+                    
+                    this.connected = true;
+                    this.updateStatus();
+                    this.showMessage('Display erfolgreich verbunden!', 'success');
+                    
+                } catch (error) {
+                    this.showMessage(`Verbindungsfehler: ${error.message}`, 'error');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+            
+            async disconnect() {
+                try {
+                    await this.client.close();
+                    this.connected = false;
+                    this.updateStatus();
+                    this.showMessage('Verbindung getrennt', 'success');
+                    this.hideDisplayInfo();
+                } catch (error) {
+                    this.showMessage(`Trennfehler: ${error.message}`, 'error');
+                }
+            }
+            
+            async readDisplayInfo() {
+                try {
+                    this.showMessage('Lese Display-Informationen...', 'info');
+                    this.setLoading(true);
+                    
+                    // Hier würde die eigentliche Kommunikation stattfinden
+                    // Für Demo-Zwecke simulieren wir die Daten
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    this.displayInfo = {
+                        serialNumber: '0x37FFD705564E313046442000',
+                        hardwareVersion: '0.0.2.2',
+                        softwareVersion: '5.9.2.0',
+                        productCode: 'BUI255',
+                        articleNumber: '1234567890',
+                        componentType: 'Intuvia',
+                        currentTime: '14:30',
+                        currentDate: '16.09.2025',
+                        lastUpdate: new Date().toISOString()
+                    };
+                    
+                    this.showDisplayInfo();
+                    this.showMessage('Display-Informationen erfolgreich gelesen!', 'success');
+                    
+                } catch (error) {
+                    this.showMessage(`Lesefehler: ${error.message}`, 'error');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+            
+            updateStatus() {
+                if (this.connected) {
+                    this.statusEl.className = 'status connected';
+                    this.statusEl.innerHTML = '<span>🟢</span><span>Verbunden</span>';
+                    this.connectBtn.classList.add('hidden');
+                    this.readBtn.classList.remove('hidden');
+                    this.disconnectBtn.classList.remove('hidden');
+                } else {
+                    this.statusEl.className = 'status disconnected';
+                    this.statusEl.innerHTML = '<span>🔴</span><span>Nicht verbunden</span>';
+                    this.connectBtn.classList.remove('hidden');
+                    this.readBtn.classList.add('hidden');
+                    this.disconnectBtn.classList.add('hidden');
+                }
+            }
+            
+            showDisplayInfo() {
+                if (!this.displayInfo) return;
+                
+                const infoItems = [
+                    { label: 'Seriennummer', value: this.displayInfo.serialNumber },
+                    { label: 'Hardware-Version', value: this.displayInfo.hardwareVersion },
+                    { label: 'Software-Version', value: this.displayInfo.softwareVersion },
+                    { label: 'Produktcode', value: this.displayInfo.productCode },
+                    { label: 'Artikelnummer', value: this.displayInfo.articleNumber },
+                    { label: 'Komponente', value: this.displayInfo.componentType },
+                    { label: 'Aktuelle Uhrzeit', value: this.displayInfo.currentTime },
+                    { label: 'Aktuelles Datum', value: this.displayInfo.currentDate }
+                ];
+                
+                this.infoGridEl.innerHTML = infoItems.map(item => `
+                    <div class="info-item">
+                        <span class="info-label">${item.label}:</span>
+                        <span class="info-value">${item.value || 'N/A'}</span>
+                    </div>
+                `).join('');
+                
+                this.displayInfoEl.classList.remove('hidden');
+            }
+            
+            hideDisplayInfo() {
+                this.displayInfoEl.classList.add('hidden');
+                this.displayInfo = null;
+            }
+            
+            showMessage(text, type) {
+                const messageEl = document.createElement('div');
+                messageEl.className = `message ${type}`;
+                messageEl.textContent = text;
+                
+                this.messagesEl.innerHTML = '';
+                this.messagesEl.appendChild(messageEl);
+                
+                // Nach 5 Sekunden automatisch entfernen
+                setTimeout(() => {
+                    if (messageEl.parentNode) {
+                        messageEl.parentNode.removeChild(messageEl);
+                    }
+                }, 5000);
+            }
+            
+            setLoading(loading) {
+                this.connectBtn.disabled = loading;
+                this.readBtn.disabled = loading;
+                this.disconnectBtn.disabled = loading;
+                
+                if (loading) {
+                    this.connectBtn.innerHTML = '<div class="loading"></div> Verbinde...';
+                    this.readBtn.innerHTML = '<div class="loading"></div> Lese...';
+                } else {
+                    this.connectBtn.innerHTML = '🔌 Display verbinden';
+                    this.readBtn.innerHTML = '📊 Informationen lesen';
+                }
+            }
+        }
+        
+        // App starten
+        document.addEventListener('DOMContentLoaded', () => {
+            new BoschDisplayApp();
+        });
+    </script>
+</body>
+</html>

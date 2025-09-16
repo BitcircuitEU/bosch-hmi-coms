@@ -1,0 +1,255 @@
+/**
+ * WebUSB Wrapper für Bosch eBike Display Kommunikation
+ * Ersetzt node-hid durch WebUSB API für Browser-Kompatibilität
+ */
+
+class WebUsbWrapper {
+  constructor() {
+    this.device = null;
+    this.isConnected = false;
+    this.endpointIn = null;
+    this.endpointOut = null;
+  }
+
+  /**
+   * Fordert den Benutzer auf, ein WebUSB-Gerät auszuwählen
+   */
+  async requestDevice() {
+    try {
+      // Bosch eBike Display Filter
+      const filters = [
+        {
+          vendorId: 0x108c,  // Bosch
+          productId: 0x155   // BUI25X Display
+        }
+      ];
+
+      // Fordere Gerät an
+      this.device = await navigator.usb.requestDevice({ filters });
+      
+      if (!this.device) {
+        throw new Error('Kein WebUSB-Gerät ausgewählt');
+      }
+
+      return this.device;
+    } catch (error) {
+      if (error.name === 'NotFoundError') {
+        throw new Error('Kein Bosch Display gefunden. Stellen Sie sicher, dass das Gerät angeschlossen ist.');
+      }
+      throw new Error(`WebUSB-Gerät-Auswahl fehlgeschlagen: ${error.message}`);
+    }
+  }
+
+  /**
+   * Öffnet die WebUSB-Verbindung
+   */
+  async open() {
+    if (!this.device) {
+      throw new Error('Kein WebUSB-Gerät ausgewählt');
+    }
+
+    try {
+      // Gerät öffnen
+      await this.device.open();
+      
+      // Konfiguration auswählen (falls nötig)
+      if (this.device.configuration === null) {
+        await this.device.selectConfiguration(1);
+      }
+      
+      // Interface beanspruchen
+      await this.device.claimInterface(0);
+      
+      // Endpoints finden
+      const configuration = this.device.configurations[0];
+      const usbInterface = configuration.interfaces[0];
+      const alternate = usbInterface.alternates[0];
+      
+      this.endpointIn = alternate.endpoints.find(ep => ep.direction === 'in');
+      this.endpointOut = alternate.endpoints.find(ep => ep.direction === 'out');
+      
+      if (!this.endpointIn || !this.endpointOut) {
+        throw new Error('HID-Endpoints nicht gefunden');
+      }
+      
+      this.isConnected = true;
+      return true;
+      
+    } catch (error) {
+      throw new Error(`WebUSB-Verbindungsfehler: ${error.message}`);
+    }
+  }
+
+  /**
+   * Schließt die WebUSB-Verbindung
+   */
+  async close() {
+    if (this.device && this.isConnected) {
+      try {
+        // Interface freigeben
+        await this.device.releaseInterface(0);
+        
+        // Gerät schließen
+        await this.device.close();
+        
+      } catch (error) {
+        console.warn('Warnung beim Schließen der WebUSB-Verbindung:', error.message);
+      }
+    }
+    
+    this.device = null;
+    this.endpointIn = null;
+    this.endpointOut = null;
+    this.isConnected = false;
+  }
+
+  /**
+   * Sendet Daten an das WebUSB-Gerät
+   */
+  async write(data) {
+    if (!this.isConnected || !this.device || !this.endpointOut) {
+      throw new Error('WebUSB-Gerät nicht verbunden');
+    }
+
+    try {
+      // Konvertiere Buffer zu Array
+      const dataArray = Array.from(data);
+      
+      // HID-Report-ID hinzufügen (0x00 für Input Reports)
+      const reportArray = [0x00, ...dataArray];
+      
+      // Stelle sicher, dass die Daten genau 65 Bytes lang sind (1 Report-ID + 64 Daten)
+      if (reportArray.length > 65) {
+        reportArray.length = 65; // Kürze auf 65 Bytes
+      } else {
+        while (reportArray.length < 65) {
+          reportArray.push(0x00);
+        }
+      }
+      
+      // Debug-Ausgabe
+      const hexString = dataArray.slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join(' ');
+      console.log(`TX: ${hexString}...`);
+      
+      // Daten senden
+      const result = await this.device.transferOut(this.endpointOut.endpointNumber, new Uint8Array(reportArray));
+      
+      if (result.status !== 'ok') {
+        throw new Error(`Transfer fehlgeschlagen: ${result.status}`);
+      }
+      
+      return result.bytesWritten;
+      
+    } catch (error) {
+      throw new Error(`WebUSB-Schreibfehler: ${error.message}`);
+    }
+  }
+
+  /**
+   * Liest Daten vom WebUSB-Gerät
+   */
+  async read(timeout = 5000) {
+    if (!this.isConnected || !this.device || !this.endpointIn) {
+      throw new Error('WebUSB-Gerät nicht verbunden');
+    }
+
+    try {
+      // Timeout für Transfer setzen
+      const startTime = Date.now();
+      
+      while (Date.now() - startTime < timeout) {
+        try {
+          // Versuche Daten zu lesen
+          const result = await this.device.transferIn(this.endpointIn.endpointNumber, 65);
+          
+          if (result.status === 'ok' && result.data && result.data.byteLength > 0) {
+            // Konvertiere Uint8Array zu Buffer
+            const buffer = Buffer.from(result.data);
+            
+            // Entferne Report-ID (erstes Byte)
+            const data = buffer.slice(1);
+            
+            // Debug-Ausgabe
+            const hexString = data.slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join(' ');
+            console.log(`RX: ${hexString}...`);
+            
+            return data;
+          }
+          
+        } catch (error) {
+          // Ignoriere "no data" Fehler und versuche es erneut
+          if (!error.message.includes('no data') && !error.message.includes('timeout')) {
+            throw error;
+          }
+        }
+        
+        // Kurze Pause vor dem nächsten Versuch
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      
+      throw new Error('TIMEOUT');
+      
+    } catch (error) {
+      if (error.message.includes('timeout') || error.message.includes('TIMEOUT')) {
+        throw new Error('TIMEOUT');
+      }
+      throw new Error(`WebUSB-Lesefehler: ${error.message}`);
+    }
+  }
+
+  /**
+   * Prüft, ob das Gerät verbunden ist
+   */
+  get connected() {
+    return this.isConnected && this.device && this.device.opened;
+  }
+
+  /**
+   * Gibt Geräteinformationen zurück
+   */
+  get info() {
+    if (!this.device) {
+      return null;
+    }
+    
+    return {
+      vendorId: this.device.vendorId,
+      productId: this.device.productId,
+      productName: this.device.productName,
+      manufacturerName: this.device.manufacturerName,
+      serialNumber: this.device.serialNumber
+    };
+  }
+
+  /**
+   * Prüft, ob WebUSB unterstützt wird
+   */
+  static isSupported() {
+    return typeof navigator !== 'undefined' && 'usb' in navigator;
+  }
+
+  /**
+   * Listet verfügbare WebUSB-Geräte auf
+   */
+  static async getDevices() {
+    if (!this.isSupported()) {
+      throw new Error('WebUSB wird von diesem Browser nicht unterstützt');
+    }
+    
+    try {
+      const devices = await navigator.usb.getDevices();
+      return devices.map(device => ({
+        vendorId: device.vendorId,
+        productId: device.productId,
+        productName: device.productName,
+        manufacturerName: device.manufacturerName,
+        serialNumber: device.serialNumber,
+        isBosch: device.vendorId === 0x108c && device.productId === 0x155
+      }));
+    } catch (error) {
+      throw new Error(`Fehler beim Auflisten der WebUSB-Geräte: ${error.message}`);
+    }
+  }
+}
+
+module.exports = WebUsbWrapper;
